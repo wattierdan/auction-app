@@ -6,54 +6,105 @@
 
 // If the user selects "BID ON AN ITEM" they are shown a list of all available items and then are prompted to select what they would like to bid on. The console then asks them how much they would like to bid, and their bid is compared to the previous highest bid. If their bid is higher, inform the user of their success and replace the previous bid with the new one. If their bid is lower (or equal), inform the user of their failure and boot them back to the selection screen.
 
-var mysql = require("mysql");
+// Import the mysql package
+const mysql = require('mysql');
 
-var connection = mysql.createConnection({
-  host: "localhost",
+// Import inquirer package 
+const inquirer = require('inquirer');
 
-  // Your port; if not 3306
+const Item = require("./lib/Item");
+
+
+const connection = mysql.createConnection({
+  host: 'localhost',
   port: 3306,
-
-  // Your username
-  user: "root",
-
-  // Your password
-  password: "",
-  database: "itemsDB"
+  user: 'root',
+  password: 'Edwink1225',
+  database: 'itemsdb',
 });
 
-connection.connect(function(err) {
+const items = []
+
+connection.connect((err) => {
   if (err) throw err;
-  console.log("connected as id " + connection.threadId + "\n");
-  createProduct();
+  console.log('connected as id ' + connection.threadId);
+  welcome()
 });
 
-function listItem() {
-  console.log("listing a new item...\n");
-  var query = connection.query(
-    "INSERT INTO items SET ?",
-    {
-      
-    },
+
+function welcome() {
+  inquirer
+      .prompt([
+          {
+              type: "list",
+              name: "task",
+              message: "What would you like to do?",
+              choices: [
+                  "POST AN ITEM",
+                  "BID ON AN ITEM"  
+              ]
+          }
+      ]).then(userChoice => {
+          switch (userChoice.task) {
+
+              case "POST AN ITEM":
+                  itemPost()
+                  break
+
+              case "BID ON AN ITEM":
+                  itemBid()
+                  break
+
+          }
+      })
+}
+
+function itemPost() {
+  inquirer
+      .prompt([
+          {
+              type: "input",
+              message: "what is the Item?",
+              name: "itemTitle"
+          },
+          {
+              type: "input",
+              message: "describe the item",
+              name: "itemDescript"
+          },
+          {
+              type: "input",
+              message: "what would you like to start the bid at?",
+              name: "itemCost"
+          }
+      ]).then(userChoice => {
+          const item = new Item(userChoice.itemTitle, userChoice.itemDescript, userChoice.itemCost)
+          items.push(item)
+          addItem()
+      }),
     function(err, res) {
       if (err) throw err;
-      console.log(res.affectedRows + " item added!\n");
+      console.log(res.affectedRows + " item inserted!\n");
+    }
+}
+
+function addItem() {
+  console.log("adding your item to the bay...\n");
+  var query = connection.query(
+    "INSERT INTO items SET ?",
+    items,
+    function(err, res) {
+      if (err) throw err;
+      console.log(res.affectedRows + " item inserted!\n");
     }
   );
-
-  // logs the actual query being run
-  console.log(query.sql);
 }
 
-
-
-function printItems() {
-  console.log("here is a list of all the items you can bid on...\n");
-  connection.query("SELECT * FROM items", function(err, res) {
-    if (err) throw err;
-    console.log(res);
-    connection.end();
-  });
-}
-
-printItems()
+// function readItems() {
+//     console.log("getting all items that are for sale...\n");
+//     connection.query("SELECT * FROM items", function(err, res) {
+//       if (err) throw err;
+//       console.log(res);
+//       connection.end();
+//     });
+// }
